@@ -10,4 +10,7 @@ dist/
 build/
 output/
 data/
+!src/probate/output/
+!src/probate/output/**
+
 src/*.egg-info/
