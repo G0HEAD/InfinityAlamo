@@ -10,6 +10,7 @@ timestamped Excel lead reports.
    - `pip install -e .[dev]`
 3. Run the demo pipeline:
    - `python -m probate --yesterday`
+   - or `.\demo.ps1` (one-command demo)
 
 ## Configuration
 Edit `config/counties.yaml` to add or enable counties. For each county, set:
