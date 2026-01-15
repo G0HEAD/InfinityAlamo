@@ -1,0 +1,44 @@
+[project]
+name = "infinityalamo"
+version = "0.1.0"
+description = "Automated Texas Probate Lead Extractor"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "requests>=2.31",
+  "beautifulsoup4>=4.12",
+  "pdfplumber>=0.11",
+  "pytesseract>=0.3.10",
+  "pillow>=10.0",
+  "pandas>=2.2",
+  "openpyxl>=3.1",
+  "tenacity>=8.2",
+  "pyyaml>=6.0",
+  "tzdata>=2023.3",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.4",
+  "ruff>=0.4",
+  "black>=24.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+line-length = 88
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

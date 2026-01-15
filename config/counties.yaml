@@ -1,0 +1,19 @@
+run:
+  timezone: "America/Chicago"
+  default_mode: "yesterday"
+  rate_limit_seconds: 1.0
+  retries: 3
+
+output:
+  pdf_dir: "data/pdfs"
+  report_dir: "output/reports"
+  logs_dir: "output/logs"
+
+counties:
+  - name: "DemoCounty"
+    enabled: true
+    connector: "demo_county"
+    portal_url: "https://example.com/probate"
+    mode: "requests"
+    auth:
+      type: "none"
