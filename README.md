@@ -1,6 +1,6 @@
 # InfinityAlamo
 
-Automated Texas Probate Lead Extractor — a Python pipeline that collects daily
+Automated Probate Lead Extractor — a Python pipeline that collects daily
 probate filings, downloads PDFs, extracts fields with OCR fallback, and outputs
 timestamped Excel lead reports.
 
