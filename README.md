@@ -27,8 +27,9 @@ Examples:
 - `pytest`
 
 ## OCR
-OCR fallback uses `pytesseract` + `Pillow`. Install Tesseract separately
-(system dependency) and ensure it is on your PATH.
+OCR fallback uses `pytesseract` and renders PDF pages to images via
+`pdfplumber`. Install Tesseract separately (system dependency) and ensure it is
+on your PATH.
 
 ## Scheduling
 Windows Task Scheduler:
