@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from probate.pdf.parse_fields import parse_fields
 
 
@@ -196,3 +198,16 @@ def test_parse_fields_partial_match_scenario():
     assert "case_number: matched" in fields.notes
     assert "deceased_name: matched" in fields.notes
     assert "filing_date: no match" in fields.notes
+
+
+def test_parse_fields_fixture_text():
+    fixture_path = (
+        Path(__file__).parent / "fixtures" / "sample_case_text.txt"
+    )
+    text = fixture_path.read_text(encoding="utf-8")
+    fields = parse_fields(text)
+    assert fields.case_number == "SAMPLE-2026-0099"
+    assert fields.filing_date == "2026-01-20"
+    assert fields.deceased_name == "Maria D. Example"
+    assert fields.filer_name == "Luis Executor"
+    assert fields.property_address == "987 Elm St, Houston, TX 77002"

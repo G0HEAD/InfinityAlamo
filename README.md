@@ -13,6 +13,11 @@ timestamped Excel lead reports.
    - `.\demo.ps1` (Windows one-command demo)
    - `./demo.sh` (macOS/Linux one-command demo)
 
+## Portal URL Tester (UI)
+Use the lightweight desktop UI to test portal URLs:
+- Windows: double-click `launch_portal_tester.bat` or run `.\launch_portal_tester.ps1`
+- macOS/Linux: `python tools/portal_tester.py`
+
 ## Configuration
 Edit `config/counties.yaml` to add or enable counties. For each county, set:
 - `connector` to a connector module name in `src/probate/connectors/`
