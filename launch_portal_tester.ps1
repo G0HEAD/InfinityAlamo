@@ -1,2 +1,2 @@
 Set-Location -Path $PSScriptRoot
-python tools/portal_tester.py
+python tools/portal_scraper_demo.py
