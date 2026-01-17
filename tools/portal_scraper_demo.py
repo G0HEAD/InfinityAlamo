@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -36,6 +37,8 @@ class PortalTesterApp:
         self.repo_root = Path(__file__).resolve().parents[1]
         self.output_dir = self.repo_root / "output"
         self.logs_dir = self.output_dir / "logs"
+        self.settings_path = self.repo_root / ".portal_demo_settings.json"
+        self.settings = self._load_settings()
 
         self._colors = {
 
@@ -93,7 +96,7 @@ class PortalTesterApp:
         tk.Label(card, text="Portal URL (optional)", fg=self._colors["text"], bg=self._colors["card"]).pack(
             anchor="w", padx=12, pady=(4, 4)
         )
-        self.url_var = tk.StringVar()
+        self.url_var = tk.StringVar(value=self.settings.get("default_url", ""))
         self.url_entry = tk.Entry(
             card,
             textvariable=self.url_var,
@@ -111,6 +114,18 @@ class PortalTesterApp:
             side="left"
         )
         self.date_var = tk.StringVar(value=date.today().isoformat())
+        self.schedule_time_var = tk.StringVar(
+            value=self.settings.get("schedule_time", "21:00")
+        )
+        self.schedule_frequency_var = tk.StringVar(
+            value=self.settings.get("schedule_frequency", "DAILY")
+        )
+        self.schedule_day_var = tk.StringVar(
+            value=self.settings.get("schedule_day", "MON")
+        )
+        self.notify_on_complete_var = tk.BooleanVar(
+            value=bool(self.settings.get("notify_on_complete", False))
+        )
         recent_dates = [
             (date.today() - timedelta(days=offset)).isoformat() for offset in range(0, 14)
         ]
@@ -160,6 +175,30 @@ class PortalTesterApp:
             pady=6,
         )
         self.open_output_button.pack(side="left", padx=(8, 0))
+
+        self.schedule_button = tk.Button(
+            action_row,
+            text="Schedule Help",
+            command=self.show_schedule_help,
+            bg=self._colors["card_light"],
+            fg=self._colors["text"],
+            relief="flat",
+            padx=12,
+            pady=6,
+        )
+        self.schedule_button.pack(side="left", padx=(8, 0))
+
+        self.settings_button = tk.Button(
+            action_row,
+            text="Settings",
+            command=self.show_settings,
+            bg=self._colors["card_light"],
+            fg=self._colors["text"],
+            relief="flat",
+            padx=12,
+            pady=6,
+        )
+        self.settings_button.pack(side="left", padx=(8, 0))
 
         results_card = tk.Frame(self.root, bg=self._colors["card"], highlightthickness=1, highlightbackground="#1f2a44")
         results_card.pack(fill="both", expand=True, padx=16, pady=(0, 16))
@@ -334,6 +373,385 @@ class PortalTesterApp:
             output_path.mkdir(parents=True, exist_ok=True)
             self._open_path(output_path)
 
+    def show_schedule_help(self) -> None:
+        repo_path = str(self.repo_root)
+        python_path = sys.executable
+        windows_args = "-m probate --yesterday"
+        cron_line = "0 21 * * * /path/to/python -m probate --yesterday"
+        task_name = "InfinityAlamo Daily"
+        schedule_time = self.schedule_time_var.get().strip() or "21:00"
+        schedule_frequency = self.schedule_frequency_var.get().strip().upper() or "DAILY"
+        schedule_day = self.schedule_day_var.get().strip().upper() or "MON"
+        cron_line = f"0 {schedule_time.split(':')[0]} * * * /path/to/python -m probate --yesterday"
+        notify_clause = ""
+        if self.notify_on_complete_var.get():
+            notify_clause = ' && msg * "InfinityAlamo scan completed"'
+        task_run = (
+            f'cmd /c "cd /d {repo_path} && \\"{python_path}\\" {windows_args}{notify_clause}"'
+        )
+        schedule_args = ["/SC", schedule_frequency, "/ST", schedule_time]
+        if schedule_frequency == "WEEKLY":
+            schedule_args.extend(["/D", schedule_day])
+        schedule_args_str = " ".join(schedule_args)
+        task_cmd_powershell = (
+            f'schtasks /Create /F {schedule_args_str} /TN "{task_name}" '
+            f'/TR \'cmd /c "cd /d {repo_path} && \\"{python_path}\\" {windows_args}{notify_clause}"\''
+        )
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Schedule Help")
+        dialog.configure(bg=self._colors["card"])
+        dialog.geometry("720x420")
+
+        tk.Label(
+            dialog,
+            text="Schedule Help",
+            fg=self._colors["text"],
+            bg=self._colors["card"],
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w", padx=12, pady=(12, 4))
+
+        help_text = (
+            "Recommended: use your OS scheduler for daily runs.\n\n"
+            "Windows Task Scheduler (manual):\n"
+            f"1) Create Task → Trigger: {schedule_frequency.title()} {schedule_time}\n"
+            "2) Action: Start a program\n"
+            f"3) Program: {python_path}\n"
+            f"4) Arguments: {windows_args}\n"
+            f"5) Start in: {repo_path}\n\n"
+            "Windows Task Scheduler (one-command):\n"
+            f"{task_cmd_powershell}\n\n"
+            "macOS/Linux (cron):\n"
+            f"{cron_line}\n"
+        )
+
+        text = tk.Text(
+            dialog,
+            height=14,
+            width=88,
+            bg=self._colors["card_light"],
+            fg=self._colors["text"],
+            relief="flat",
+            wrap="word",
+        )
+        text.insert("1.0", help_text)
+        text.configure(state="disabled")
+        text.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+
+        button_row = tk.Frame(dialog, bg=self._colors["card"])
+        button_row.pack(fill="x", padx=12, pady=(0, 12))
+
+        copy_btn = tk.Button(
+            button_row,
+            text="Copy Task Scheduler Command",
+            command=lambda: self._copy_command(task_cmd_powershell),
+            bg=self._colors["accent"],
+            fg="#0b1120",
+            relief="flat",
+            padx=12,
+            pady=6,
+        )
+        copy_btn.pack(side="left")
+
+        actions_menu = tk.Menu(dialog, tearoff=0)
+
+        def _current_schedule_values() -> tuple[str, str, str]:
+            time_value = self.schedule_time_var.get().strip() or "21:00"
+            frequency_value = self.schedule_frequency_var.get().strip() or "DAILY"
+            day_value = self.schedule_day_var.get().strip() or "MON"
+            return time_value, frequency_value, day_value
+
+        actions_menu.add_command(
+            label="Create Task Now",
+            command=lambda: self._create_scheduled_task(
+                dialog, task_name, *_current_schedule_values(), task_run
+            ),
+        )
+        actions_menu.add_command(
+            label="Check Task Status",
+            command=lambda: self._query_task(dialog, task_name),
+        )
+        actions_menu.add_command(
+            label="Enable Task",
+            command=lambda: self._toggle_task(dialog, task_name, enable=True),
+        )
+        actions_menu.add_command(
+            label="Disable Task",
+            command=lambda: self._toggle_task(dialog, task_name, enable=False),
+        )
+        actions_menu.add_command(
+            label="Delete Task",
+            command=lambda: self._delete_task(dialog, task_name),
+        )
+
+        self.task_actions_menu = actions_menu
+
+        menu_btn = tk.Button(
+            button_row,
+            text="Task Actions ☰",
+            command=lambda: self._show_task_actions(menu_btn),
+            bg=self._colors["card_light"],
+            fg=self._colors["text"],
+            relief="flat",
+            padx=12,
+            pady=6,
+        )
+        menu_btn.pack(side="left", padx=(8, 0))
+
+        close_btn = tk.Button(
+            button_row,
+            text="Close",
+            command=dialog.destroy,
+            bg=self._colors["card_light"],
+            fg=self._colors["text"],
+            relief="flat",
+            padx=12,
+            pady=6,
+        )
+        close_btn.pack(side="left", padx=(8, 0))
+
+    def _copy_command(self, command: str) -> None:
+        self.root.clipboard_clear()
+        self.root.clipboard_append(command)
+        messagebox.showinfo("Copied", "Task Scheduler command copied to clipboard.")
+
+    def _show_task_actions(self, widget: tk.Widget) -> None:
+        try:
+            self.task_actions_menu.tk_popup(
+                widget.winfo_rootx(), widget.winfo_rooty() + widget.winfo_height()
+            )
+        finally:
+            self.task_actions_menu.grab_release()
+
+    def _create_scheduled_task(
+        self,
+        dialog: tk.Toplevel,
+        task_name: str,
+        schedule_time: str,
+        schedule_frequency: str,
+        schedule_day: str,
+        task_run: str,
+    ) -> None:
+        if not _is_valid_time(schedule_time):
+            messagebox.showwarning("Invalid time", "Use HH:MM (24h) format.")
+            return
+        schedule_frequency = schedule_frequency.upper()
+        schedule_day = schedule_day.upper()
+        args = [
+            "schtasks",
+            "/Create",
+            "/F",
+            "/SC",
+            schedule_frequency,
+            "/ST",
+            schedule_time,
+            "/TN",
+            task_name,
+            "/TR",
+            task_run,
+        ]
+        if schedule_frequency == "WEEKLY":
+            args.extend(["/D", schedule_day])
+        result = subprocess.run(
+            args,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            messagebox.showinfo("Task Created", "Daily task created successfully.")
+            dialog.destroy()
+        else:
+            messagebox.showwarning(
+                "Task Creation Failed",
+                (result.stderr or result.stdout or "Unknown error").strip(),
+            )
+            dialog.destroy()
+
+    def _query_task(self, dialog: tk.Toplevel, task_name: str) -> None:
+        result = subprocess.run(
+            ["schtasks", "/Query", "/TN", task_name, "/V", "/FO", "LIST"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            messagebox.showinfo("Task Status", result.stdout.strip())
+            dialog.destroy()
+        else:
+            messagebox.showwarning("Task Status", (result.stderr or result.stdout).strip())
+            dialog.destroy()
+
+    def _toggle_task(self, dialog: tk.Toplevel, task_name: str, enable: bool) -> None:
+        action = "/ENABLE" if enable else "/DISABLE"
+        result = subprocess.run(
+            ["schtasks", "/Change", "/TN", task_name, action],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            messagebox.showinfo("Task Updated", "Task updated successfully.")
+            dialog.destroy()
+        else:
+            messagebox.showwarning("Task Update Failed", (result.stderr or result.stdout).strip())
+            dialog.destroy()
+
+    def _delete_task(self, dialog: tk.Toplevel, task_name: str) -> None:
+        result = subprocess.run(
+            ["schtasks", "/Delete", "/TN", task_name, "/F"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            messagebox.showinfo("Task Deleted", "Task deleted successfully.")
+            dialog.destroy()
+        else:
+            messagebox.showwarning("Task Delete Failed", (result.stderr or result.stdout).strip())
+            dialog.destroy()
+
+    def show_settings(self) -> None:
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Settings")
+        dialog.configure(bg=self._colors["card"])
+        dialog.geometry("560x260")
+
+        tk.Label(
+            dialog,
+            text="Settings",
+            fg=self._colors["text"],
+            bg=self._colors["card"],
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w", padx=12, pady=(12, 4))
+
+        tk.Label(
+            dialog,
+            text="Default Portal URL",
+            fg=self._colors["text"],
+            bg=self._colors["card"],
+        ).pack(anchor="w", padx=12, pady=(8, 4))
+        url_entry = tk.Entry(
+            dialog,
+            textvariable=self.url_var,
+            width=70,
+            relief="flat",
+            bg=self._colors["card_light"],
+            fg=self._colors["text"],
+            insertbackground=self._colors["text"],
+        )
+        url_entry.pack(anchor="w", padx=12)
+
+        tk.Label(
+            dialog,
+            text="Preferred Daily Scan Time (HH:MM, 24h)",
+            fg=self._colors["text"],
+            bg=self._colors["card"],
+        ).pack(anchor="w", padx=12, pady=(12, 4))
+        time_entry = tk.Entry(
+            dialog,
+            textvariable=self.schedule_time_var,
+            width=10,
+            relief="flat",
+            bg=self._colors["card_light"],
+            fg=self._colors["text"],
+            insertbackground=self._colors["text"],
+        )
+        time_entry.pack(anchor="w", padx=12)
+
+        tk.Label(
+            dialog,
+            text="Schedule Frequency",
+            fg=self._colors["text"],
+            bg=self._colors["card"],
+        ).pack(anchor="w", padx=12, pady=(12, 4))
+        freq_picker = ttk.Combobox(
+            dialog,
+            textvariable=self.schedule_frequency_var,
+            values=["DAILY", "WEEKLY"],
+            width=10,
+            state="readonly",
+        )
+        freq_picker.pack(anchor="w", padx=12)
+
+        tk.Label(
+            dialog,
+            text="Weekly Day (if WEEKLY)",
+            fg=self._colors["text"],
+            bg=self._colors["card"],
+        ).pack(anchor="w", padx=12, pady=(12, 4))
+        day_picker = ttk.Combobox(
+            dialog,
+            textvariable=self.schedule_day_var,
+            values=["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
+            width=6,
+            state="readonly",
+        )
+        day_picker.pack(anchor="w", padx=12)
+
+        notify_check = tk.Checkbutton(
+            dialog,
+            text="Notify on completion (Windows pop-up)",
+            variable=self.notify_on_complete_var,
+            bg=self._colors["card"],
+            fg=self._colors["text"],
+            selectcolor=self._colors["card_light"],
+            activebackground=self._colors["card"],
+            activeforeground=self._colors["text"],
+        )
+        notify_check.pack(anchor="w", padx=12, pady=(12, 4))
+
+        button_row = tk.Frame(dialog, bg=self._colors["card"])
+        button_row.pack(fill="x", padx=12, pady=(16, 12))
+
+        save_btn = tk.Button(
+            button_row,
+            text="Save",
+            command=lambda: self._save_settings(dialog),
+            bg=self._colors["accent"],
+            fg="#0b1120",
+            relief="flat",
+            padx=12,
+            pady=6,
+        )
+        save_btn.pack(side="left")
+
+        close_btn = tk.Button(
+            button_row,
+            text="Close",
+            command=dialog.destroy,
+            bg=self._colors["card_light"],
+            fg=self._colors["text"],
+            relief="flat",
+            padx=12,
+            pady=6,
+        )
+        close_btn.pack(side="left", padx=(8, 0))
+
+    def _load_settings(self) -> dict:
+        if not self.settings_path.exists():
+            return {}
+        try:
+            return json.loads(self.settings_path.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+
+    def _save_settings(self, dialog: tk.Toplevel) -> None:
+        time_value = self.schedule_time_var.get().strip()
+        if time_value and not _is_valid_time(time_value):
+            messagebox.showwarning("Invalid time", "Use HH:MM (24h) format.")
+            return
+        payload = {
+            "default_url": self.url_var.get().strip(),
+            "schedule_time": time_value or "21:00",
+            "schedule_frequency": self.schedule_frequency_var.get().strip() or "DAILY",
+            "schedule_day": self.schedule_day_var.get().strip() or "MON",
+            "notify_on_complete": bool(self.notify_on_complete_var.get()),
+        }
+        self.settings_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        dialog.destroy()
+        messagebox.showinfo("Saved", "Settings saved.")
+
     def _open_path(self, path: Path) -> None:
         if sys.platform.startswith("win"):
             os.startfile(path)  # type: ignore[attr-defined]
@@ -346,13 +764,11 @@ class PortalTesterApp:
         self._link_targets.append(target)
         self.link_list.insert(tk.END, f"{label} — {target}")
 
-
     def _register_path_link(self, label: str, path: Path) -> None:
         if path.exists():
             self._register_link(label, str(path))
         else:
             self._register_link(f"{label} (missing)", str(path))
-
 
     def on_open_link(self, _event: tk.Event) -> None:
         selection = self.link_list.curselection()
@@ -364,7 +780,6 @@ class PortalTesterApp:
         else:
             self._open_path(Path(target))
 
-
     def _clear_links(self) -> None:
         self._link_targets = []
         self.link_list.delete(0, tk.END)
@@ -375,6 +790,14 @@ class PortalTesterApp:
     def _checklist_item(self, label: str, ok: bool) -> None:
         status = "✅" if ok else "⚠️"
         self.checklist.insert(tk.END, f"{status} {label}")
+
+
+def _is_valid_time(value: str) -> bool:
+    try:
+        datetime.strptime(value, "%H:%M")
+        return True
+    except Exception:
+        return False
 
 
 def main() -> None:
