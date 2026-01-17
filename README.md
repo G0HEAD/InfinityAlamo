@@ -13,10 +13,10 @@ timestamped Excel lead reports.
    - `.\demo.ps1` (Windows one-command demo)
    - `./demo.sh` (macOS/Linux one-command demo)
 
-## Portal URL Tester (UI)
-Use the lightweight desktop UI to test portal URLs:
+## Portal Scraper Demo (UI)
+Use the lightweight desktop UI to run the probate pipeline and review results:
 - Windows: double-click `launch_portal_tester.bat` or run `.\launch_portal_tester.ps1`
-- macOS/Linux: `python tools/portal_tester.py`
+- macOS/Linux: `python tools/portal_scraper_demo.py`
 
 ## Configuration
 Edit `config/counties.yaml` to add or enable counties. For each county, set:
