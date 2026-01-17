@@ -11,3 +11,4 @@ build/
 output/
 data/
 src/*.egg-info/
+.portal_demo_settings.json
