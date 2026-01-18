@@ -12,7 +12,7 @@ import webbrowser
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from tkinter import messagebox
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 from probate.config import load_config
 from probate.pipeline import run_pipeline
@@ -25,6 +25,17 @@ def _is_valid_url(value: str) -> bool:
         return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
     except Exception:
         return False
+
+
+def _mask_url(value: str) -> str:
+    try:
+        parsed = urlparse(value)
+        if not parsed.scheme or not parsed.netloc:
+            return value
+        # Strip query/fragment for safer display
+        return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+    except Exception:
+        return value
 
 
 class PortalTesterApp:
@@ -96,7 +107,12 @@ class PortalTesterApp:
         tk.Label(card, text="Portal URL (optional)", fg=self._colors["text"], bg=self._colors["card"]).pack(
             anchor="w", padx=12, pady=(4, 4)
         )
-        self.url_var = tk.StringVar(value=self.settings.get("default_url", ""))
+        self.remember_url_var = tk.BooleanVar(
+            value=bool(self.settings.get("remember_url", False))
+        )
+        self.url_var = tk.StringVar(
+            value=self.settings.get("default_url", "") if self.remember_url_var.get() else ""
+        )
         self.url_entry = tk.Entry(
             card,
             textvariable=self.url_var,
@@ -285,6 +301,8 @@ class PortalTesterApp:
         self._clear_checklist()
         self.test_button.configure(state="disabled")
         self.log(f"Running pipeline for {run_date.isoformat()}...")
+        if url:
+            self.log(f"Portal URL: {_mask_url(url)}")
         thread = threading.Thread(
             target=self._run_pipeline,
             args=(run_date, self.county_var.get().strip(), url),
@@ -642,6 +660,18 @@ class PortalTesterApp:
         )
         url_entry.pack(anchor="w", padx=12)
 
+        remember_check = tk.Checkbutton(
+            dialog,
+            text="Remember URL on this device",
+            variable=self.remember_url_var,
+            bg=self._colors["card"],
+            fg=self._colors["text"],
+            selectcolor=self._colors["card_light"],
+            activebackground=self._colors["card"],
+            activeforeground=self._colors["text"],
+        )
+        remember_check.pack(anchor="w", padx=12, pady=(6, 0))
+
         tk.Label(
             dialog,
             text="Preferred Daily Scan Time (HH:MM, 24h)",
@@ -701,6 +731,15 @@ class PortalTesterApp:
         )
         notify_check.pack(anchor="w", padx=12, pady=(12, 4))
 
+        privacy_note = tk.Label(
+            dialog,
+            text="Note: settings are stored locally in .portal_demo_settings.json",
+            fg=self._colors["muted"],
+            bg=self._colors["card"],
+            font=("Segoe UI", 9),
+        )
+        privacy_note.pack(anchor="w", padx=12, pady=(4, 0))
+
         button_row = tk.Frame(dialog, bg=self._colors["card"])
         button_row.pack(fill="x", padx=12, pady=(16, 12))
 
@@ -742,11 +781,12 @@ class PortalTesterApp:
             messagebox.showwarning("Invalid time", "Use HH:MM (24h) format.")
             return
         payload = {
-            "default_url": self.url_var.get().strip(),
+            "default_url": self.url_var.get().strip() if self.remember_url_var.get() else "",
             "schedule_time": time_value or "21:00",
             "schedule_frequency": self.schedule_frequency_var.get().strip() or "DAILY",
             "schedule_day": self.schedule_day_var.get().strip() or "MON",
             "notify_on_complete": bool(self.notify_on_complete_var.get()),
+            "remember_url": bool(self.remember_url_var.get()),
         }
         self.settings_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         dialog.destroy()

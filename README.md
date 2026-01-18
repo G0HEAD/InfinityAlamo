@@ -1,4 +1,4 @@
-# InfinityAlamo
+# Infinity Alamo
 
 Automated Probate Lead Extractor — a Python pipeline that collects daily
 probate filings, downloads PDFs, extracts fields with OCR fallback, and outputs
@@ -8,7 +8,7 @@ timestamped Excel lead reports.
 1. Create and activate your environment.
 2. Install dependencies:
    - `pip install -e .[dev]`
-3. Run the demo pipeline:
+3. Run the demo pipeline (CLI):
    - `python -m probate --yesterday`
    - `.\demo.ps1` (Windows one-command demo)
    - `./demo.sh` (macOS/Linux one-command demo)
@@ -39,9 +39,11 @@ OCR fallback uses `pytesseract` and renders PDF pages to images via
 on your PATH.
 
 ## Scheduling
-Windows Task Scheduler:
+Use the **Schedule Help** button in the UI for a copy-paste command, or:
+
+Windows Task Scheduler (manual):
 1. Create a new Task.
-2. Trigger: Daily at 9:00 PM.
+2. Trigger: Daily at your preferred time.
 3. Action: Start a program.
 4. Program/script: your Python executable.
 5. Arguments: `-m probate --yesterday`
@@ -60,3 +62,22 @@ macOS/Linux (cron):
 ## Adding a county
 1. Create a new connector in `src/probate/connectors/<county>.py`.
 2. Add a matching entry in `config/counties.yaml`.
+
+## Security & Privacy
+See `SECURITY.md` for data handling, safe defaults, and privacy guidance.
+
+## Project Structure
+```
+InfinityAlamo/
+  config/               # counties.yaml
+  tools/                # portal_scraper_demo.py (UI)
+  src/probate/          # pipeline + connectors + pdf + output
+  tests/                # pytest suite
+  output/               # reports + logs (generated)
+  data/                 # downloaded PDFs (generated)
+```
+
+## Client Readiness
+- `CLIENT_READINESS.md` — go/no-go checklist before client delivery.
+- `SETUP_GUIDE.md` — step-by-step setup, scheduling, and troubleshooting.
+- `KNOWN_LIMITATIONS.md` — items to disclose to clients.
