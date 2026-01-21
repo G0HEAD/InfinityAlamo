@@ -92,17 +92,17 @@ class PortalTesterApp:
             bg=self._colors["card"],
             font=("Segoe UI", 9),
         ).pack(anchor="w", padx=12, pady=(0, 6))
-        self.county_var = tk.StringVar(value="DemoCounty")
-        self.county_entry = tk.Entry(
+        county_options = self._load_county_options()
+        default_county = county_options[0] if county_options else "DemoCounty"
+        self.county_var = tk.StringVar(value=default_county)
+        self.county_combo = ttk.Combobox(
             card,
             textvariable=self.county_var,
-            width=30,
-            relief="flat",
-            bg=self._colors["card_light"],
-            fg=self._colors["text"],
-            insertbackground=self._colors["text"],
+            values=county_options,
+            width=28,
+            state="normal",
         )
-        self.county_entry.pack(anchor="w", padx=12, pady=(0, 8))
+        self.county_combo.pack(anchor="w", padx=12, pady=(0, 8))
 
         tk.Label(card, text="Portal URL (optional)", fg=self._colors["text"], bg=self._colors["card"]).pack(
             anchor="w", padx=12, pady=(4, 4)
@@ -141,6 +141,9 @@ class PortalTesterApp:
         )
         self.notify_on_complete_var = tk.BooleanVar(
             value=bool(self.settings.get("notify_on_complete", False))
+        )
+        self.demo_data_var = tk.BooleanVar(
+            value=bool(self.settings.get("enable_demo_data", True))
         )
         recent_dates = [
             (date.today() - timedelta(days=offset)).isoformat() for offset in range(0, 14)
@@ -303,6 +306,22 @@ class PortalTesterApp:
         self.log(f"Running pipeline for {run_date.isoformat()}...")
         if url:
             self.log(f"Portal URL: {_mask_url(url)}")
+            try:
+                config = load_config("config/counties.yaml")
+                county_name = self.county_var.get().strip()
+                names = {county.name.lower() for county in config.counties}
+                if (
+                    county_name
+                    and county_name.lower() not in names
+                    and not self.demo_data_var.get()
+                ):
+                    messagebox.showwarning(
+                        "County filter not found",
+                        "County not found in config. The run will proceed without "
+                        "county filtering and will pull all available results.",
+                    )
+            except Exception:
+                pass
         thread = threading.Thread(
             target=self._run_pipeline,
             args=(run_date, self.county_var.get().strip(), url),
@@ -314,11 +333,68 @@ class PortalTesterApp:
         start = time.time()
         try:
             config = load_config("config/counties.yaml")
+            demo_enabled = self.demo_data_var.get()
+            if not demo_enabled:
+                for county in config.counties:
+                    if self._is_demo_county(county):
+                        county.enabled = False
+            matched = False
+            selected = None
             for county in config.counties:
-                if county.name != county_name:
-                    county.enabled = False
+                if county.name.lower() == county_name.lower():
+                    selected = county
+                    matched = True
+                    break
+
+            if selected is not None:
+                if not demo_enabled and self._is_demo_county(selected):
+                    selected = None
+                    matched = False
+                    self.county_warning = (
+                        "Demo data disabled; skipping demo county selection."
+                    )
+                else:
+                    for county in config.counties:
+                        county.enabled = county is selected
+                    if portal_url:
+                        selected.portal_url = portal_url
+                    selected.county_filter = county_name
+                    self.county_warning = ""
+            else:
                 if portal_url:
-                    county.portal_url = portal_url
+                    if not config.counties:
+                        raise ValueError("No counties configured in config/counties.yaml.")
+                    if demo_enabled:
+                        selected = config.counties[0]
+                        for county in config.counties:
+                            county.enabled = county is selected
+                        selected.portal_url = portal_url
+                        selected.county_filter = county_name
+                        self.county_warning = (
+                            f"County '{county_name}' not found in config; "
+                            f"using '{selected.name}' connector with filter hint."
+                        )
+                    else:
+                        for county in config.counties:
+                            if not self._is_demo_county(county):
+                                county.enabled = True
+                        enabled = [c for c in config.counties if c.enabled]
+                        if not enabled:
+                            raise ValueError(
+                                "Demo data disabled and no non-demo counties are configured."
+                            )
+                        for county in enabled:
+                            county.portal_url = portal_url
+                            county.county_filter = county_name
+                        self.county_warning = (
+                            f"County '{county_name}' not found in config; "
+                            "collecting all portal results without county filtering."
+                        )
+                else:
+                    self.county_warning = (
+                        f"County '{county_name}' not found in config; "
+                        "running all enabled counties."
+                    )
 
             results = run_pipeline(config, run_date)
             elapsed = time.time() - start
@@ -338,6 +414,8 @@ class PortalTesterApp:
         self, run_date: date, results: list, elapsed: float
     ) -> None:
         self.log(f"Elapsed: {elapsed:.2f}s")
+        if getattr(self, "county_warning", ""):
+            self.log(f"Note: {self.county_warning}")
         self.log(f"Cases captured: {len(results)}")
         for result in results:
             fields = result.extracted_fields
@@ -633,7 +711,7 @@ class PortalTesterApp:
         dialog = tk.Toplevel(self.root)
         dialog.title("Settings")
         dialog.configure(bg=self._colors["card"])
-        dialog.geometry("560x260")
+        dialog.geometry("560x340")
 
         tk.Label(
             dialog,
@@ -671,6 +749,18 @@ class PortalTesterApp:
             activeforeground=self._colors["text"],
         )
         remember_check.pack(anchor="w", padx=12, pady=(6, 0))
+
+        demo_check = tk.Checkbutton(
+            dialog,
+            text="Enable demo data",
+            variable=self.demo_data_var,
+            bg=self._colors["card"],
+            fg=self._colors["text"],
+            selectcolor=self._colors["card_light"],
+            activebackground=self._colors["card"],
+            activeforeground=self._colors["text"],
+        )
+        demo_check.pack(anchor="w", padx=12, pady=(4, 0))
 
         tk.Label(
             dialog,
@@ -787,10 +877,27 @@ class PortalTesterApp:
             "schedule_day": self.schedule_day_var.get().strip() or "MON",
             "notify_on_complete": bool(self.notify_on_complete_var.get()),
             "remember_url": bool(self.remember_url_var.get()),
+            "enable_demo_data": bool(self.demo_data_var.get()),
         }
         self.settings_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         dialog.destroy()
         messagebox.showinfo("Saved", "Settings saved.")
+
+    def _load_county_options(self) -> list[str]:
+        try:
+            config = load_config("config/counties.yaml")
+            names = [county.name for county in config.counties]
+            return sorted(set(names)) if names else ["DemoCounty"]
+        except Exception:
+            return ["DemoCounty"]
+
+    @staticmethod
+    def _is_demo_county(county: "object") -> bool:
+        name = getattr(county, "name", "")
+        connector = getattr(county, "connector", "")
+        return str(name).lower().startswith("demo") or str(connector).lower().startswith(
+            "demo"
+        )
 
     def _open_path(self, path: Path) -> None:
         if sys.platform.startswith("win"):

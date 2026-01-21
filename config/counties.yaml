@@ -17,3 +17,10 @@ counties:
     mode: "requests"
     auth:
       type: "none"
+  - name: "DemoCounty2"
+    enabled: true
+    connector: "democounty2"
+    portal_url: "https://example.com/probate"
+    mode: "requests"
+    auth:
+      type: "none"
