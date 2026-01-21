@@ -18,6 +18,10 @@ Use the lightweight desktop UI to run the probate pipeline and review results:
 - Windows: double-click `launch_portal_tester.bat` or run `.\launch_portal_tester.ps1`
 - macOS/Linux: `python tools/portal_scraper_demo.py`
 
+## Windows Installer (InfinityAlamoDemo)
+Build a desktop installer with icon + shortcut:
+- See `installer/README.md`
+
 ## Configuration
 Edit `config/counties.yaml` to add or enable counties. For each county, set:
 - `connector` to a connector module name in `src/probate/connectors/`
