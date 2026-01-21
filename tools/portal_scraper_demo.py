@@ -45,10 +45,11 @@ class PortalTesterApp:
         self.root.geometry("820x520")
         self.root.configure(bg="#0f172a")
 
-        self.repo_root = Path(__file__).resolve().parents[1]
-        self.output_dir = self.repo_root / "output"
+        self.repo_root = self._get_repo_root()
+        self.runtime_root = self._get_runtime_root()
+        self.output_dir = self.runtime_root / "output"
         self.logs_dir = self.output_dir / "logs"
-        self.settings_path = self.repo_root / ".portal_demo_settings.json"
+        self.settings_path = self.runtime_root / ".portal_demo_settings.json"
         self.settings = self._load_settings()
 
         self._colors = {
@@ -307,7 +308,7 @@ class PortalTesterApp:
         if url:
             self.log(f"Portal URL: {_mask_url(url)}")
             try:
-                config = load_config("config/counties.yaml")
+                config = load_config(str(self.repo_root / "config" / "counties.yaml"))
                 county_name = self.county_var.get().strip()
                 names = {county.name.lower() for county in config.counties}
                 if (
@@ -332,7 +333,8 @@ class PortalTesterApp:
     def _run_pipeline(self, run_date: date, county_name: str, portal_url: str) -> None:
         start = time.time()
         try:
-            config = load_config("config/counties.yaml")
+            config = load_config(str(self.repo_root / "config" / "counties.yaml"))
+            self._apply_output_paths(config)
             demo_enabled = self.demo_data_var.get()
             if not demo_enabled:
                 for county in config.counties:
@@ -883,9 +885,25 @@ class PortalTesterApp:
         dialog.destroy()
         messagebox.showinfo("Saved", "Settings saved.")
 
+    def _apply_output_paths(self, config: "object") -> None:
+        config.output.pdf_dir = str(self.runtime_root / "data" / "pdfs")
+        config.output.report_dir = str(self.runtime_root / "output" / "reports")
+        config.output.logs_dir = str(self.runtime_root / "output" / "logs")
+
+    def _get_repo_root(self) -> Path:
+        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+            return Path(sys._MEIPASS)
+        return Path(__file__).resolve().parents[1]
+
+    def _get_runtime_root(self) -> Path:
+        if getattr(sys, "frozen", False):
+            base = Path(os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+            return base / "InfinityAlamoDemo"
+        return Path(__file__).resolve().parents[1]
+
     def _load_county_options(self) -> list[str]:
         try:
-            config = load_config("config/counties.yaml")
+            config = load_config(str(self.repo_root / "config" / "counties.yaml"))
             names = [county.name for county in config.counties]
             return sorted(set(names)) if names else ["DemoCounty"]
         except Exception:
