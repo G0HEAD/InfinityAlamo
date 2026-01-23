@@ -348,21 +348,22 @@ class PortalTesterApp:
                     matched = True
                     break
 
-            if selected is not None:
-                if not demo_enabled and self._is_demo_county(selected):
-                    selected = None
-                    matched = False
+            selection_allowed = (
+                selected is not None
+                and (demo_enabled or not self._is_demo_county(selected))
+            )
+            if selection_allowed:
+                for county in config.counties:
+                    county.enabled = county is selected
+                if portal_url:
+                    selected.portal_url = portal_url
+                selected.county_filter = county_name
+                self.county_warning = ""
+            else:
+                if selected is not None and not demo_enabled and self._is_demo_county(selected):
                     self.county_warning = (
                         "Demo data disabled; skipping demo county selection."
                     )
-                else:
-                    for county in config.counties:
-                        county.enabled = county is selected
-                    if portal_url:
-                        selected.portal_url = portal_url
-                    selected.county_filter = county_name
-                    self.county_warning = ""
-            else:
                 if portal_url:
                     if not config.counties:
                         raise ValueError("No counties configured in config/counties.yaml.")

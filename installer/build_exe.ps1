@@ -12,6 +12,8 @@ Write-Host "Building InfinityAlamoDemo executable..." -ForegroundColor Cyan
   --icon "assets\\infinity_alamo_demo.ico" `
   --noconfirm `
   --clean `
+  --hidden-import "probate.connectors.demo_county" `
+  --hidden-import "probate.connectors.democounty2" `
   --add-data "config;config" `
   --add-data "tools;tools" `
   --add-data "src;src" `

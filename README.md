@@ -4,7 +4,15 @@ Automated Probate Lead Extractor — a Python pipeline that collects daily
 probate filings, downloads PDFs, extracts fields with OCR fallback, and outputs
 timestamped Excel lead reports.
 
-## Quick start
+## Quick start (no prior experience needed)
+Choose one path:
+
+### A) Windows installer (recommended for clients)
+1. Download the latest `InfinityAlamoDemo-Setup.exe` from the GitHub Releases.
+2. Run the installer → it creates a desktop shortcut.
+3. Launch **InfinityAlamoDemo** from the desktop.
+
+### B) Run from source
 1. Create and activate your environment.
 2. Install dependencies:
    - `pip install -e .[dev]`
@@ -15,8 +23,9 @@ timestamped Excel lead reports.
 
 ## Portal Scraper Demo (UI)
 Use the lightweight desktop UI to run the probate pipeline and review results:
-- Windows: double-click `launch_portal_tester.bat` or run `.\launch_portal_tester.ps1`
-- macOS/Linux: `python tools/portal_scraper_demo.py`
+- Windows (source): double-click `launch_portal_tester.bat` or run `.\launch_portal_tester.ps1`
+- macOS/Linux (source): `python tools/portal_scraper_demo.py`
+- Windows (installer): launch **InfinityAlamoDemo** from the desktop
 
 ## Windows Installer (InfinityAlamoDemo)
 Build a desktop installer with icon + shortcut:
@@ -61,7 +70,7 @@ macOS/Linux (cron):
 ## Troubleshooting
 - If OCR returns empty results, confirm Tesseract is installed and on PATH.
 - If PDFs fail to download, check portal availability and credentials.
-- Logs are written to `output/logs/<YYYY-MM-DD>.log`.
+- Logs are written to `output/logs/<YYYY-MM-DD>.log` (installer: `%LOCALAPPDATA%\\InfinityAlamoDemo\\output\\logs`).
 
 ## Adding a county
 1. Create a new connector in `src/probate/connectors/<county>.py`.
@@ -85,3 +94,7 @@ InfinityAlamo/
 - `CLIENT_READINESS.md` — go/no-go checklist before client delivery.
 - `SETUP_GUIDE.md` — step-by-step setup, scheduling, and troubleshooting.
 - `KNOWN_LIMITATIONS.md` — items to disclose to clients.
+
+## GitHub
+- Repo: https://github.com/G0HEAD/InfinityAlamo
+- Releases: download the latest Windows installer from the **Releases** page.

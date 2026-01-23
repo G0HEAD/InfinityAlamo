@@ -2,7 +2,7 @@
 AppName=InfinityAlamoDemo
 AppVersion=0.1.0
 AppPublisher=InfinityAlamo
-DefaultDirName={pf}\InfinityAlamoDemo
+DefaultDirName={autopf}\InfinityAlamoDemo
 DefaultGroupName=InfinityAlamoDemo
 OutputDir=Output
 OutputBaseFilename=InfinityAlamoDemo-Setup

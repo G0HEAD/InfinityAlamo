@@ -18,6 +18,9 @@ This folder contains scripts and configuration to build a Windows installer
 - Executable: `dist/InfinityAlamoDemo/InfinityAlamoDemo.exe`
 - Installer: `installer/Output/InfinityAlamoDemo-Setup.exe`
 
+## GitHub Release
+To ship to clients, upload `InfinityAlamoDemo-Setup.exe` to the GitHub **Releases** page.
+
 ## Runtime data location
 When installed, the app writes reports/logs to:
 - `%LOCALAPPDATA%\\InfinityAlamoDemo\\output`
