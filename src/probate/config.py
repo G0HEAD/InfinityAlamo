@@ -30,6 +30,7 @@ class CountyConfig:
     portal_url: str
     mode: str = "requests"
     auth: Dict[str, Any] | None = None
+    county_filter: str | None = None
 
 
 @dataclass

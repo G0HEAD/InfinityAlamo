@@ -8,6 +8,8 @@ __pycache__/
 .ruff_cache/
 dist/
 build/
+*.spec
+installer/Output/
 output/
 data/
 src/*.egg-info/

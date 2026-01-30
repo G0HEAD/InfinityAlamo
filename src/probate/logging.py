@@ -18,7 +18,8 @@ def setup_logging(
         log_file = logs_dir / "run.log"
     handler = logging.FileHandler(log_file, encoding="utf-8")
     formatter = logging.Formatter(
-        "%(asctime)s %(levelname)s %(name)s - %(message)s"
+        "%(asctime)s %(levelname)s %(name)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
     handler.setFormatter(formatter)
 

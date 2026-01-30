@@ -101,7 +101,10 @@ def run_pipeline(config: AppConfig, target_date: date) -> List[CaseResult]:
                 )
 
     report_path = Path(storage.report_dir) / f"Daily_Probate_Leads_{target_date.isoformat()}.xlsx"
-    write_excel(results, report_path)
+    if results:
+        write_excel(results, report_path)
+    else:
+        logger.info("No cases found; skipping report generation.")
     logger.info(
         "Run summary: cases_found=%s pdfs_downloaded=%s ocr_used=%s errors=%s",
         cases_found,
